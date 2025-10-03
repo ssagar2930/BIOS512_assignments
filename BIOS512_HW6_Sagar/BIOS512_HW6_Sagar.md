@@ -189,7 +189,17 @@ most amount of unique words in comparison to the total words they speak.
 #### a) Find what episode Wesley left the show as a main character and state it explicitly. Meaning, find the first significant gap where he is not found in more than two episodes in a row. 
 *Hint*: It's after season 3 (ended at episode 174), so you can filter out seasons 1-3 and print Wesley's dialog count per episode. Then, scan the table for the gap. 
 
+wesley_counts <- dialogs_fixed %>%
+  filter(episode_number > 174, character == "WESLEY") %>%
+  count(episode_number, name = "wesley_lines")
+
+print(wesley_counts)
+
+Wesley left the show as a main character on episode 183. 
+
 #### b) After Wesley leaves the main cast, in which episodes does he make cameo appearances?
+
+He makes a cameo appearance at episode 206, 219, 263, and 272. 
 
 #### c) Dig back into the data. Print:
 -   Wesley's last piece of dialog before he left the main cast.
@@ -197,11 +207,55 @@ most amount of unique words in comparison to the total words they speak.
   
 *Hint*: To do this, you'll need to filter the `dialogs_fixed` data set to Welsey's lines and the episode number, and use `slice_tail(n = 1)` to get the last observation.
 
+# filter so it's only showing wesley's lines 
+wesley_lines <- dialogs_fixed %>%
+  filter(character == "WESLEY") %>%
+  select(episode_number, dialog) %>%
+  arrange(episode_number)
+
+# data frame for wesley's last line as main character
+last_main_line <- wesley_lines %>%
+  filter(episode_number <= 183) %>%
+  slice_tail(n = 1)
+
+# data frame for wesley's last line ever
+last_ever_line <- wesley_lines %>%
+  slice_tail(n = 1)
+
+# printing results 
+cat("Wesley’s LAST LINE as a main cast member (episode", last_main_line$episode_number, "):\n",
+    last_main_line$dialog, "\n\n")
+
+cat("Wesley’s FINAL LINE ever on the show (episode", last_ever_line$episode_number, "):\n",
+    last_ever_line$dialog, "\n")
+
 ## Question 5
 Create a heatmap with `dialog_len_per_ep` showing mean dialog length per episode for each character. Sort the characters on the y-axis by their overall mean dialog length, with the lowest on top using a factor. Add a title and an axis title. 
 *Hints*:
 For the factor:
-1. Compute overall mean (mean of mean) dialog length per character (`group_by()` then `summarize()`), and arrange the overall mean in ascending order. Add `pull(character)` to the end of this step so that you can use character as a factor in the next step. Store all of this in a new tibble.
-2. Convert character to factor with this order. On `dialog_len_per_ep`, you'll use a mutate statement to add the factor `(mutate(character = factor(character, levels = DATAFROMHINT1))`.
-3. Create heatmap using `geom_tile()`.
-4. If you want nicer colors, you can add `scale_fill_viridis_c()` (or another color scale) to your ggplot statement. **Not required**, but fun to mess around with!
+##computing overall mean (mean of mean) dialog length per character (`group_by()` then `summarize()`), and arrange the overall mean in ascending order. Add `pull(character)` to the end of this step so that you can use character as a factor in the next step. Store all of this in a new tibble.
+
+char_order <- dialog_len_per_ep %>%
+  group_by(character) %>%
+  summarize(overall_mean_length = mean(mean_dialog_length), .groups = "drop") %>%
+  arrange(overall_mean_length) %>%
+  pull(character)
+  
+##converting factor to order 
+
+dialog_len_ordered <- dialog_len_per_ep %>%
+  mutate(character = factor(character, levels = rev(char_order)))
+
+## plotting 
+
+ggplot(dialog_len_ordered, aes(x = episode_number, y = character, fill = mean_dialog_length)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "plasma") +  # Optional, looks nice
+  labs(
+    title = "Mean Dialog Length per Episode by Character",
+    x = "Episode Number",
+    y = "Character",
+    fill = "Mean Dialog\nLength"
+  ) +
+  theme_minimal()
+  
